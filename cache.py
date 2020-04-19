@@ -36,18 +36,25 @@ class Cache:
         self.cache_map = {}
         self.time = time
         self.equate_id_to_value = equate_id_to_value
+        self.strategy = None
 
     def get_current_size(self):
         return len(self.cache_map)
 
-    def add_element(self, value: int, strategy: EvictionStrategy = None):
+    def set_strategy(self, strategy: EvictionStrategy):
+        self.strategy = strategy
+
+    def add_element(self, value: int):
         if self.equate_id_to_value:
             id = value
         else:
             id = str(uuid4())
 
-        if strategy and self.get_current_size() >= self.max_cache_size:
-            suggestions = strategy.suggest_evictions(self.cache_map)
+        if self.strategy and self.get_current_size() >= self.max_cache_size:
+            suggestions = self.strategy.suggest_evictions(self.cache_map)
+
+            assert len(suggestions) > 0
+            # Evict the first element suggested by the strategy
             self.evict_element_by_id(suggestions[0].id)
 
         assert self.get_current_size() < self.max_cache_size

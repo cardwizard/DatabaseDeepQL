@@ -1,34 +1,114 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from timer import Time
 from cache import Cache, CacheElement
-from strategy import EvictLeastRecentlyUsed
+from strategy import EvictLeastRecentlyUsed, EvictMostRecentlyUsed, EvictRandomly, EvictionStrategy
 
 
 class Query:
-    def __init__(self, query_type: str, parameters: Dict, cache: Cache):
+    def __init__(self, query_type: str, parameters: Dict, cache: Cache = None, time: Time = None):
         self.query_type = query_type
         self.parameters = parameters
+        self.time = time
+
+        self.cache = cache
+        self.done = False
+
+        self.hits = 0
+        self.misses = 0
+
+    def set_query_cache(self, cache):
         self.cache = cache
 
-    def _select_query(self):
+    def set_time(self, time):
+        self.time = time
+
+    def is_done(self):
+        return self.done
+
+    def step(self):
+        if self.is_done():
+            return self.hits, self.misses
+
+        self.time.increment()
+
+        if self.query_type == "select":
+            return self._step_select_query()
+
+    def _step_select_query(self):
+        # parameter requirement: {"start": int, "end": int}
+        if self.parameters.get("current_position") is None:
+            self.parameters["current_position"] = self.parameters["start"]
+
+        if self.parameters["current_position"] == self.parameters["end"]:
+            self.done = True
+            return self.hits, self.misses
+
+        next_element = self.cache.get_element_by_id(self.parameters["current_position"])
+
+        if next_element:
+            # Increase the hit rate if element is found!
+            next_element.get_value()
+            self.hits += 1
+        else:
+            self.cache.add_element(self.parameters["current_position"])
+            self.misses += 1
+
+        # Increment the current position
+        self.parameters["current_position"] += 1
+
+        return self.hits, self.misses
+
+    def _step_join_query(self):
         pass
 
-    def _join_query(self):
-        pass
 
+class QueryWorkload:
+    def __init__(self, query_list: List[Query]) -> None:
 
-# class Env:
-#     def __init__(self, cache_size: int) -> None:
-#         self.cache_size = cache_size
+        self.query_list = query_list
+        self.caches = []
+
+    def assign_caches(self, cache_list) -> None:
+        for id, cache in enumerate(cache_list):
+            self.query_list[id].set_query_cache(cache)
+
+    def assign_strategies(self, strategies: List[EvictionStrategy]) -> None:
+        assert len(self.query_list) == len(strategies)
+
+        for id, strategy in enumerate(strategies):
+            self.query_list[id].cache.set_strategy(strategy)
+
+    def is_done(self):
+        return all([query.is_done() for query in self.query_list])
+
+    def step(self) -> Tuple:
+        workload_hits = 0
+        workload_misses = 0
+
+        for query in self.query_list:
+            hit, miss = query.step()
+            workload_hits += hit
+            workload_misses += miss
+
+        return workload_hits, workload_misses
 
 
 if __name__ == '__main__':
+
     t = Time()
-    c = Cache(10, t, equate_id_to_value=True)
-    strategy = EvictLeastRecentlyUsed()
+    c1 = Cache(10, t, equate_id_to_value=True)
+    c2 = Cache(10, t, equate_id_to_value=True)
 
-    for x in range(15):
-        c.add_element(x, strategy)
-        t.increment()
+    lru_strategy = EvictLeastRecentlyUsed()
+    mru_strategy = EvictMostRecentlyUsed()
+    random_strategy = EvictRandomly()
 
-    print(c.cache_map)
+    q1 = Query(query_type="select", time=t, parameters={"start": 0, "end": 15})
+    q2 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
+
+    wl = QueryWorkload([q1, q2])
+    wl.assign_caches([c1, c1])
+    wl.assign_strategies([mru_strategy, mru_strategy])
+
+    while not wl.is_done():
+        print(wl.step())
