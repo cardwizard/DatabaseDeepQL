@@ -1,6 +1,7 @@
 from typing import Dict, List
 from timer import Time
 from cache import Cache, CacheElement
+from strategy import EvictLeastRecentlyUsed
 
 
 class Query:
@@ -24,7 +25,10 @@ class Query:
 if __name__ == '__main__':
     t = Time()
     c = Cache(10, t, equate_id_to_value=True)
+    strategy = EvictLeastRecentlyUsed()
 
-    for x in range(10):
-        print(c.add_element(x))
+    for x in range(15):
+        c.add_element(x, strategy)
+        t.increment()
 
+    print(c.cache_map)

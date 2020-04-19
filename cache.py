@@ -1,6 +1,7 @@
 from timer import Time
 from uuid import uuid4
 from typing import Union
+from strategy import EvictionStrategy
 
 
 class CacheElement:
@@ -22,6 +23,9 @@ class CacheElement:
     def get_hits(self):
         return self.hit_count
 
+    def get_last_access(self):
+        return self.last_access
+
 
 class Cache:
     """
@@ -36,11 +40,15 @@ class Cache:
     def get_current_size(self):
         return len(self.cache_map)
 
-    def add_element(self, value: int):
+    def add_element(self, value: int, strategy: EvictionStrategy = None):
         if self.equate_id_to_value:
             id = value
         else:
             id = str(uuid4())
+
+        if strategy and self.get_current_size() >= self.max_cache_size:
+            suggestions = strategy.suggest_evictions(self.cache_map)
+            self.evict_element_by_id(suggestions[0].id)
 
         assert self.get_current_size() < self.max_cache_size
 
@@ -61,5 +69,4 @@ class Cache:
         for cache_element in self.cache_map.values():
             if cache_element.value == value:
                 return cache_element
-
         return None
