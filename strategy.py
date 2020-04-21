@@ -2,6 +2,7 @@ from typing import List, Dict
 
 import random
 
+
 class EvictionStrategy:
     @staticmethod
     def suggest_evictions(cache_map):

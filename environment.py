@@ -34,6 +34,22 @@ class Query:
         if self.query_type == "select":
             return self._step_select_query()
 
+        if self.query_type == "join":
+            return self._step_join_query()
+
+    def _get_element(self, value):
+        next_element = self.cache.get_element_by_id(value)
+
+        if next_element:
+            # Increase the hit rate if element is found!
+            self.hits += 1
+        else:
+            self.cache.add_element(value)
+            self.misses += 1
+
+        next_element = self.cache.get_element_by_id(value)
+        return next_element
+
     def _step_select_query(self):
         # parameter requirement: {"start": int, "end": int}
         if self.parameters.get("current_position") is None:
@@ -43,15 +59,8 @@ class Query:
             self.done = True
             return self.hits, self.misses
 
-        next_element = self.cache.get_element_by_id(self.parameters["current_position"])
-
-        if next_element:
-            # Increase the hit rate if element is found!
-            next_element.get_value()
-            self.hits += 1
-        else:
-            self.cache.add_element(self.parameters["current_position"])
-            self.misses += 1
+        next_element = self._get_element(self.parameters["current_position"])
+        next_element.get_value()
 
         # Increment the current position
         self.parameters["current_position"] += 1
@@ -59,7 +68,32 @@ class Query:
         return self.hits, self.misses
 
     def _step_join_query(self):
-        pass
+        # parameter requirement: {"start_table_1": int, "end_table_1": int,
+        # start_table_2": int, "end_table_2": int}
+        if self.parameters.get("current_position_table_1") is None:
+            self.parameters["current_position_table_1"] = self.parameters["start_table_1"]
+
+        if self.parameters.get("current_position_table_2") is None:
+            self.parameters["current_position_table_2"] = self.parameters["start_table_2"]
+
+        if (self.parameters["current_position_table_1"] == self.parameters["end_table_1"]) and \
+                (self.parameters["current_position_table_2"] == self.parameters["end_table_2"]):
+            # Query is complete
+            self.done = True
+            return self.hits, self.misses
+
+        if self.parameters["current_position_table_2"] == self.parameters["end_table_2"]:
+            # Reset the values for the next iteration
+            self.parameters["current_position_table_1"] += 1
+            self.parameters["current_position_table_2"] = self.parameters["start_table_2"]
+
+        # Get both the elements!
+        self._get_element(self.parameters["current_position_table_1"]).get_value()
+        self._get_element(self.parameters["current_position_table_2"]).get_value()
+
+        self.parameters["current_position_table_2"] += 1
+
+        return self.hits, self.misses
 
 
 class QueryWorkload:
@@ -96,19 +130,22 @@ class QueryWorkload:
 if __name__ == '__main__':
 
     t = Time()
-    c1 = Cache(10, t, equate_id_to_value=True)
+    # c1 = Cache(50, t, equate_id_to_value=True)
     c2 = Cache(10, t, equate_id_to_value=True)
 
     lru_strategy = EvictLeastRecentlyUsed()
     mru_strategy = EvictMostRecentlyUsed()
     random_strategy = EvictRandomly()
+    c2.set_strategy(random_strategy)
 
-    q1 = Query(query_type="select", time=t, parameters={"start": 0, "end": 15})
-    q2 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
+    q1 = Query(query_type="join", time=t, parameters={"start_table_1": 0, "end_table_1": 15,
+                                                      "start_table_2": 20, "end_table_2": 30})
+    q1.set_query_cache(c2)
 
-    wl = QueryWorkload([q1, q2])
-    wl.assign_caches([c1, c1])
-    wl.assign_strategies([mru_strategy, mru_strategy])
+    while not q1.is_done():
+        print(q1.step())
 
-    while not wl.is_done():
-        print(wl.step())
+    # q2 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
+    # q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
+    # q4 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
+
