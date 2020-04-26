@@ -1,7 +1,7 @@
-from timer import Time
+from buffer_pool_baseline.timer import Time
 from uuid import uuid4
 from typing import Union
-from strategy import EvictionStrategy
+from buffer_pool_baseline.strategy import EvictionStrategy
 
 
 class CacheElement:
@@ -77,3 +77,7 @@ class Cache:
             if cache_element.value == value:
                 return cache_element
         return None
+
+    def clear(self):
+        self.cache_map = {}
+        self.strategy = None

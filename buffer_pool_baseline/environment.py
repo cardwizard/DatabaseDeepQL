@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
-from timer import Time
-from cache import Cache, CacheElement
-from strategy import EvictLeastRecentlyUsed, EvictMostRecentlyUsed, EvictRandomly, EvictionStrategy
+from buffer_pool_baseline.timer import Time
+from buffer_pool_baseline.cache import Cache
+from buffer_pool_baseline.strategy import EvictLeastRecentlyUsed, EvictMostRecentlyUsed, EvictRandomly, EvictionStrategy
 
 
 class Query:
@@ -130,21 +130,23 @@ class QueryWorkload:
 if __name__ == '__main__':
 
     t = Time()
-    # c1 = Cache(50, t, equate_id_to_value=True)
+
     c2 = Cache(10, t, equate_id_to_value=True)
 
     lru_strategy = EvictLeastRecentlyUsed()
     mru_strategy = EvictMostRecentlyUsed()
     random_strategy = EvictRandomly()
-    c2.set_strategy(random_strategy)
 
-    q1 = Query(query_type="join", time=t, parameters={"start_table_1": 0, "end_table_1": 15,
-                                                      "start_table_2": 20, "end_table_2": 30})
+    c2.set_strategy(mru_strategy)
+
+    q1 = Query(query_type="join", time=t, parameters={"start_table_1": 9296, "end_table_1": 9983,
+                                                      "start_table_2": 9580, "end_table_2": 9919})
     q1.set_query_cache(c2)
 
     while not q1.is_done():
-        print(q1.step())
+        q1.step()
 
+    print(q1.step())
     # q2 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
     # q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
     # q4 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
