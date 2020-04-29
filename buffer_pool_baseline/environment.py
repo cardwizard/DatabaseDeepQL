@@ -137,10 +137,11 @@ if __name__ == '__main__':
     mru_strategy = EvictMostRecentlyUsed()
     random_strategy = EvictRandomly()
 
-    c2.set_strategy(mru_strategy)
+    c2.set_strategy(random_strategy)
 
-    q1 = Query(query_type="join", time=t, parameters={"start_table_1": 9296, "end_table_1": 9983,
-                                                      "start_table_2": 9580, "end_table_2": 9919})
+    q1 = Query(query_type="join", time=t, parameters={'start_table_1': 585, 'end_table_1': 604,
+                                                      'start_table_2': 600, 'end_table_2': 657})
+    q2 = Query(query_type="select", time=t, parameters={'start': 585, 'end': 604})
     q1.set_query_cache(c2)
 
     while not q1.is_done():
