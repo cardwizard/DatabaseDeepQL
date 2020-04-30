@@ -34,7 +34,7 @@ def get_overlapping_blocks(number_of_queries, average_table_size):
         else:
             start = start + random.randint(-100, 100)
 
-        query_type = random.choice(["join" "select"])
+        query_type = random.choice(["join", "select"])
 
         if query_type == "select":
 
@@ -114,4 +114,4 @@ if __name__ == '__main__':
                     f.write(output)
                     f.write("\n")
 
-        workload_id += 1
+            workload_id += 1
