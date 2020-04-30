@@ -102,7 +102,7 @@ if __name__ == '__main__':
     workload_id = 0
 
     for table_size in tqdm(range(average_table_start, average_table_end, 10)):
-        workload = get_overlapping_blocks(1, table_size)
+        workload = get_overlapping_blocks(10, table_size)
 
         for cache in range(cache_size_start, cache_size_end, 10):
             for strategy in strategies:
@@ -114,4 +114,3 @@ if __name__ == '__main__':
                     f.write("\n")
 
         workload_id += 1
-
