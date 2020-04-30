@@ -62,7 +62,7 @@ def get_overlapping_blocks(number_of_queries, average_table_size):
     return parameter_list
 
 
-def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int):
+def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int, avg_table_size: int):
     res = []
 
     # t = Time()
@@ -83,7 +83,8 @@ def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int):
 
         res.append({"Query Type": query.query_type, "Parameters": query.parameters,
                         "Hits": hits, "Misses": misses, "Cache Size": c.max_cache_size,
-                        "Eviction Strategy": strategy, "Workload ID": workload_id})
+                        "Eviction Strategy": strategy, "Workload ID": workload_id,
+                        "Table Size": avg_table_size})
 
     c.clear()
     return res
@@ -95,18 +96,18 @@ if __name__ == '__main__':
     cache_size_start = 10
     cache_size_end = 100
 
-    average_table_start = 10
+    average_table_start = 100
     average_table_end = 1000
 
     results = []
     workload_id = 0
 
-    for table_size in tqdm(range(average_table_start, average_table_end, 10)):
-        workload = get_overlapping_blocks(10, table_size)
+    for table_size in tqdm(range(average_table_start, average_table_end, 100)):
+        workload = get_overlapping_blocks(50, table_size)
 
         for cache in range(cache_size_start, cache_size_end, 10):
             for strategy in strategies:
-                workload_output = run_workload(workload, cache, strategy, workload_id)
+                workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
                 output = dumps(workload_output)
 
                 with open("overlapping_results.json", "a+") as f:
