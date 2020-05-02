@@ -34,7 +34,7 @@ def get_overlapping_blocks(number_of_queries, average_table_size):
         else:
             start = start + random.randint(-5, 5)
 
-        query_type = random.choice(["join"])
+        query_type = random.choice(["join", "select", "sequential"])
 
         if query_type == "select":
 
@@ -97,30 +97,30 @@ if __name__ == '__main__':
     cache_size_end = 100
 
     average_table_start = 100
-    average_table_end = 1000
+    average_table_end = 500
 
     results = []
     workload_id = 0
 
-    # for table_size in tqdm(range(average_table_start, average_table_end, 100)):
-    #     workload = get_overlapping_blocks(50, table_size)
-    #
-    #     for cache in range(cache_size_start, cache_size_end, 10):
-    #         for strategy in strategies:
-    #             workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
-    #             output = dumps(workload_output)
-    #
-    #             with open("overlapping_results.json", "a+") as f:
-    #                 f.write(output)
-    #                 f.write("\n")
-    #
-    #         workload_id += 1
-    workload = get_overlapping_blocks(50, 100)
+    for table_size in tqdm(range(average_table_start, average_table_end, 100)):
+        workload = get_overlapping_blocks(50, table_size)
 
-    for strategy in tqdm(strategies):
-        workload_output = run_workload(workload, 150, strategy, 150, 100)
-        output = dumps(workload_output)
-        with open("overlapping_results_tuned.json", "a+") as f:
-            f.write(output)
-            f.write("\n")
+        for cache in range(cache_size_start, cache_size_end, 20):
+            for strategy in strategies:
+                workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
+                output = dumps(workload_output)
+
+                with open("overlapping_results.json", "a+") as f:
+                    f.write(output)
+                    f.write("\n")
+
+            workload_id += 1
+    # workload = get_overlapping_blocks(50, 100)
+    #
+    # for strategy in tqdm(strategies):
+    #     workload_output = run_workload(workload, 150, strategy, 150, 100)
+    #     output = dumps(workload_output)
+    #     with open("overlapping_results_tuned.json", "a+") as f:
+    #         f.write(output)
+    #         f.write("\n")
 
