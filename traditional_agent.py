@@ -41,8 +41,8 @@ def get_overlapping_blocks(number_of_queries, average_table_size, probability):
         else:
             start = start + random.randint(-5, 5)
 
-        query_type = choice(["join", "select", "sequential"], p=probability)[0]
-
+        query_type = choice(["join", "select", "sequential"], p=probability)
+        print(query_type)
         if query_type == "select":
 
             end = start + average_table_size + random.randint(-5, 5)
@@ -69,7 +69,7 @@ def get_overlapping_blocks(number_of_queries, average_table_size, probability):
             if end <= start:
                 continue
             p = get_seq_query_parameters(start, end, random.randint(40, 50))
-            
+
         parameter_list.append(p)
 
     return parameter_list
