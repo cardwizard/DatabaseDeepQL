@@ -24,6 +24,11 @@ def get_join_query_parameters(start_1, end_1, start_2, end_2) -> Dict:
     return parameters
 
 
+def get_seq_query_parameters(start, end, loop_size) -> Dict:
+    parameters = {"start": start, "end": end, "loop_size": loop_size, "query_type": "sequential"}
+    return parameters
+
+
 def get_overlapping_blocks(number_of_queries, average_table_size, probability):
 
     parameter_list = []
@@ -47,7 +52,7 @@ def get_overlapping_blocks(number_of_queries, average_table_size, probability):
 
             p = get_select_query_parameters(start=start, end=end)
 
-        else:
+        elif query_type == "join":
             end = start + average_table_size + random.randint(-5, 5)
             if end <= start:
                 continue
@@ -59,6 +64,12 @@ def get_overlapping_blocks(number_of_queries, average_table_size, probability):
 
             p = get_join_query_parameters(start_1=start, end_1=end, start_2=start_2, end_2=end_2)
 
+        else:
+            end = start + average_table_size + random.randint(-5, 5)
+            if end <= start:
+                continue
+            p = get_seq_query_parameters(start, end, random.randint(40, 50))
+            
         parameter_list.append(p)
 
     return parameter_list
