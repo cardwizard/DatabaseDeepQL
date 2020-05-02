@@ -37,6 +37,9 @@ class Query:
         if self.query_type == "join":
             return self._step_join_query()
 
+        if self.query_type == "sequential":
+            return self._step_sequential_query()
+
     def _get_element(self, value):
         next_element = self.cache.get_element_by_id(value)
 
@@ -63,6 +66,29 @@ class Query:
         next_element.get_value()
 
         # Increment the current position
+        self.parameters["current_position"] += 1
+
+        return self.hits, self.misses
+
+    def _step_sequential_query(self):
+        if self.parameters.get("current_position") is None:
+            self.parameters["current_position"] = self.parameters["start"]
+
+        if self.parameters.get("current_counter") is None:
+            self.parameters["current_counter"] = 0
+
+        if self.parameters["current_position"] == self.parameters["end"] and \
+                self.parameters["current_counter"] == self.parameters["loop_size"]:
+            self.done = True
+            return self.hits, self.misses
+
+        if self.parameters["current_position"] == self.parameters["end"]:
+            self._get_element(self.parameters["current_position"]).get_value()
+            self.parameters["current_counter"] += 1
+            self.parameters["current_position"] = self.parameters["start"]
+            return self.hits, self.misses
+
+        self._get_element(self.parameters["current_position"]).get_value()
         self.parameters["current_position"] += 1
 
         return self.hits, self.misses
@@ -139,9 +165,8 @@ if __name__ == '__main__':
 
     c2.set_strategy(random_strategy)
 
-    q1 = Query(query_type="join", time=t, parameters={'start_table_1': 585, 'end_table_1': 604,
-                                                      'start_table_2': 600, 'end_table_2': 657})
-    q2 = Query(query_type="select", time=t, parameters={'start': 585, 'end': 604})
+    q1 = Query(query_type="sequential", time=t, parameters={"start": 0, "end": 50, "loop_size": 10})
+    # q2 = Query(query_type="select", time=t, parameters={'start': 585, 'end': 604})
     q1.set_query_cache(c2)
 
     while not q1.is_done():

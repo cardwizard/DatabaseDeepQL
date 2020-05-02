@@ -30,15 +30,15 @@ def get_overlapping_blocks(number_of_queries, average_table_size):
     for query_number in range(number_of_queries):
 
         if not start:
-            start = random.randint(0, 1000)
+            start = random.randint(0, 100)
         else:
-            start = start + random.randint(-100, 100)
+            start = start + random.randint(-5, 5)
 
-        query_type = random.choice(["join", "select"])
+        query_type = random.choice(["join"])
 
         if query_type == "select":
 
-            end = start + average_table_size + random.randint(-100, 100)
+            end = start + average_table_size + random.randint(-5, 5)
 
             if end <= start:
                 continue
@@ -46,12 +46,12 @@ def get_overlapping_blocks(number_of_queries, average_table_size):
             p = get_select_query_parameters(start=start, end=end)
 
         else:
-            end = start + average_table_size + random.randint(-100, 100)
+            end = start + average_table_size + random.randint(-5, 5)
             if end <= start:
                 continue
 
             start_2 = random.randint(start, end)
-            end_2 = start_2 + average_table_size + random.randint(-100, 100)
+            end_2 = start_2 + average_table_size + random.randint(-5, 5)
             if end_2 <= start_2:
                 continue
 
@@ -102,16 +102,25 @@ if __name__ == '__main__':
     results = []
     workload_id = 0
 
-    for table_size in tqdm(range(average_table_start, average_table_end, 100)):
-        workload = get_overlapping_blocks(50, table_size)
+    # for table_size in tqdm(range(average_table_start, average_table_end, 100)):
+    #     workload = get_overlapping_blocks(50, table_size)
+    #
+    #     for cache in range(cache_size_start, cache_size_end, 10):
+    #         for strategy in strategies:
+    #             workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
+    #             output = dumps(workload_output)
+    #
+    #             with open("overlapping_results.json", "a+") as f:
+    #                 f.write(output)
+    #                 f.write("\n")
+    #
+    #         workload_id += 1
+    workload = get_overlapping_blocks(50, 100)
 
-        for cache in range(cache_size_start, cache_size_end, 10):
-            for strategy in strategies:
-                workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
-                output = dumps(workload_output)
+    for strategy in tqdm(strategies):
+        workload_output = run_workload(workload, 150, strategy, 150, 100)
+        output = dumps(workload_output)
+        with open("overlapping_results_tuned.json", "a+") as f:
+            f.write(output)
+            f.write("\n")
 
-                with open("overlapping_results.json", "a+") as f:
-                    f.write(output)
-                    f.write("\n")
-
-            workload_id += 1
