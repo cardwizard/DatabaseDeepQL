@@ -1,9 +1,11 @@
 from buffer_pool_baseline.environment import Query, Time, \
     Cache, \
     EvictLeastRecentlyUsed, EvictMostRecentlyUsed, EvictRandomly
-from json import dumps
+from json import dumps, loads
 from typing import List, Dict
 from tqdm import tqdm
+from numpy.random import choice
+from sys import argv
 
 import random
 
@@ -22,7 +24,7 @@ def get_join_query_parameters(start_1, end_1, start_2, end_2) -> Dict:
     return parameters
 
 
-def get_overlapping_blocks(number_of_queries, average_table_size):
+def get_overlapping_blocks(number_of_queries, average_table_size, probability):
 
     parameter_list = []
     start = None
@@ -34,7 +36,7 @@ def get_overlapping_blocks(number_of_queries, average_table_size):
         else:
             start = start + random.randint(-5, 5)
 
-        query_type = random.choice(["join", "select", "sequential"])
+        query_type = choice(["join", "select", "sequential"], p=probability)[0]
 
         if query_type == "select":
 
@@ -91,6 +93,7 @@ def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int, av
 
 
 if __name__ == '__main__':
+
     t = Time()
 
     cache_size_start = 10
@@ -103,14 +106,14 @@ if __name__ == '__main__':
     workload_id = 0
 
     for table_size in tqdm(range(average_table_start, average_table_end, 100)):
-        workload = get_overlapping_blocks(50, table_size)
+        workload = get_overlapping_blocks(50, table_size, probability=loads(argv[1]))
 
         for cache in range(cache_size_start, cache_size_end, 20):
             for strategy in strategies:
                 workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
                 output = dumps(workload_output)
 
-                with open("overlapping_results.json", "a+") as f:
+                with open(argv[2], "a+") as f:
                     f.write(output)
                     f.write("\n")
 
