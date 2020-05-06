@@ -1,7 +1,12 @@
 from buffer_pool_baseline.timer import Time
 from uuid import uuid4
 from typing import Union
-from buffer_pool_baseline.strategy import EvictionStrategy
+from buffer_pool_baseline.strategy import EvictionStrategy, EvictLeastRecentlyUsed, EvictMostRecentlyUsed, \
+    EvictRandomly
+
+
+class ActionNotPassedError(Exception):
+    pass
 
 
 class CacheElement:
@@ -36,22 +41,38 @@ class Cache:
         self.cache_map = {}
         self.time = time
         self.equate_id_to_value = equate_id_to_value
+
         self.strategy = None
+        self.strategy_pool = {"random": EvictRandomly(), "lru": EvictLeastRecentlyUsed(),
+                           "mru": EvictMostRecentlyUsed()}
+        self.dynamic_strategy = False
 
     def get_current_size(self):
         return len(self.cache_map)
 
-    def set_strategy(self, strategy: EvictionStrategy):
-        self.strategy = strategy
+    def set_strategy(self, strategy: str):
+        self.strategy = self.strategy_pool[strategy]
+        self.dynamic_strategy = True
 
-    def add_element(self, value: int):
+    def add_element(self, value: int, action=None):
+        # print(action)
         if self.equate_id_to_value:
             id = value
         else:
             id = str(uuid4())
 
-        if self.strategy and self.get_current_size() >= self.max_cache_size:
-            suggestions = self.strategy.suggest_evictions(self.cache_map)
+        if self.get_current_size() >= self.max_cache_size:
+
+            if self.dynamic_strategy and self.strategy:
+                strategy = self.strategy
+
+            elif action:
+                strategy = self.strategy_pool[action]
+
+            else:
+                raise ActionNotPassedError
+
+            suggestions = strategy.suggest_evictions(self.cache_map)
 
             assert len(suggestions) > 0
             # Evict the first element suggested by the strategy

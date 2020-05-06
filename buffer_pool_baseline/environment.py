@@ -5,7 +5,8 @@ from buffer_pool_baseline.strategy import EvictLeastRecentlyUsed, EvictMostRecen
 
 
 class Query:
-    def __init__(self, query_type: str, parameters: Dict, cache: Cache = None, time: Time = None):
+    def __init__(self, query_type: str, parameters: Dict, cache: Cache = None, time: Time = None,
+                 found_in_cache_optim=True):
         self.query_type = query_type
         self.parameters = parameters
         self.time = time
@@ -13,8 +14,10 @@ class Query:
         self.cache = cache
         self.done = False
 
+        self.found_in_cache_optim = found_in_cache_optim
         self.hits = 0
         self.misses = 0
+        self.actions = ["lru", "mru", "random"]
 
     def set_query_cache(self, cache):
         self.cache = cache
@@ -25,52 +28,61 @@ class Query:
     def is_done(self):
         return self.done
 
-    def step(self):
+    def step(self, action=None):
         if self.is_done():
             return self.hits, self.misses
 
         self.time.increment()
+        hits, misses, found_in_cache = None, None, None
 
         if self.query_type == "select":
-            return self._step_select_query()
+            hits, misses, found_in_cache = self._step_select_query(action)
 
         if self.query_type == "join":
-            return self._step_join_query()
+            hits, misses, found_in_cache = self._step_join_query(action)
 
         if self.query_type == "sequential":
-            return self._step_sequential_query()
+            hits, misses, found_in_cache = self._step_sequential_query(action)
 
-    def _get_element(self, value):
+        # If the optimizer is on, continue steos
+        if found_in_cache and self.found_in_cache_optim:
+            self.step(action)
+
+        return hits, misses
+
+    def _get_element(self, value, action):
         next_element = self.cache.get_element_by_id(value)
+        found_in_cache = False
 
         if next_element:
             # Increase the hit rate if element is found!
             self.hits += 1
+            found_in_cache = True
         else:
-            self.cache.add_element(value)
+            self.cache.add_element(value, action)
             self.misses += 1
 
         next_element = self.cache.get_element_by_id(value)
-        return next_element
+        return next_element, found_in_cache
 
-    def _step_select_query(self):
+    def _step_select_query(self, action=None):
         # parameter requirement: {"start": int, "end": int}
         if self.parameters.get("current_position") is None:
             self.parameters["current_position"] = self.parameters["start"]
 
         if self.parameters["current_position"] == self.parameters["end"]:
             self.done = True
-            return self.hits, self.misses
+            return self.hits, self.misses, False
 
-        next_element = self._get_element(self.parameters["current_position"])
+        next_element, found_in_cache = self._get_element(self.parameters["current_position"], action)
         next_element.get_value()
 
         # Increment the current position
         self.parameters["current_position"] += 1
 
-        return self.hits, self.misses
+        return self.hits, self.misses, found_in_cache
 
-    def _step_sequential_query(self):
+    def _step_sequential_query(self, action = None):
         if self.parameters.get("current_position") is None:
             self.parameters["current_position"] = self.parameters["start"]
 
@@ -80,20 +92,25 @@ class Query:
         if self.parameters["current_position"] == self.parameters["end"] and \
                 self.parameters["current_counter"] == self.parameters["loop_size"]:
             self.done = True
-            return self.hits, self.misses
+            return self.hits, self.misses, False
 
         if self.parameters["current_position"] == self.parameters["end"]:
-            self._get_element(self.parameters["current_position"]).get_value()
+            current_element, found_in_cache = self._get_element(self.parameters["current_position"], action)
+            current_element.get_value()
+
             self.parameters["current_counter"] += 1
             self.parameters["current_position"] = self.parameters["start"]
-            return self.hits, self.misses
 
-        self._get_element(self.parameters["current_position"]).get_value()
+            return self.hits, self.misses, found_in_cache
+
+        current_element, found_in_cache = self._get_element(self.parameters["current_position"], action)
+        current_element.get_value()
+
         self.parameters["current_position"] += 1
 
-        return self.hits, self.misses
+        return self.hits, self.misses, found_in_cache
 
-    def _step_join_query(self):
+    def _step_join_query(self, action=None):
         # parameter requirement: {"start_table_1": int, "end_table_1": int,
         # start_table_2": int, "end_table_2": int}
         if self.parameters.get("current_position_table_1") is None:
@@ -106,7 +123,7 @@ class Query:
                 (self.parameters["current_position_table_2"] == self.parameters["end_table_2"]):
             # Query is complete
             self.done = True
-            return self.hits, self.misses
+            return self.hits, self.misses, False
 
         if self.parameters["current_position_table_2"] == self.parameters["end_table_2"]:
             # Reset the values for the next iteration
@@ -114,12 +131,14 @@ class Query:
             self.parameters["current_position_table_2"] = self.parameters["start_table_2"]
 
         # Get both the elements!
-        self._get_element(self.parameters["current_position_table_1"]).get_value()
-        self._get_element(self.parameters["current_position_table_2"]).get_value()
+        element_1, found_in_cache_1 = self._get_element(self.parameters["current_position_table_1"], action)
+        element_1.get_value()
 
+        element_2, found_in_cache_2 = self._get_element(self.parameters["current_position_table_2"], action)
+        element_2.get_value()
         self.parameters["current_position_table_2"] += 1
 
-        return self.hits, self.misses
+        return self.hits, self.misses, (found_in_cache_1 and found_in_cache_2)
 
 
 class QueryWorkload:
@@ -159,21 +178,24 @@ if __name__ == '__main__':
 
     c2 = Cache(10, t, equate_id_to_value=True)
 
-    lru_strategy = EvictLeastRecentlyUsed()
-    mru_strategy = EvictMostRecentlyUsed()
-    random_strategy = EvictRandomly()
+    # c2.set_strategy("mru")
 
-    c2.set_strategy(random_strategy)
+    q1 = Query(query_type="sequential", time=t,
+               parameters={"start": 0, "end": 50, "loop_size": 10})
+    q2 = Query(query_type="join", time=t, parameters={'start_table_1': 0, 'end_table_1': 20,
+                                                      'start_table_2': 10, 'end_table_2': 30})
+    q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
+    # q1.set_query_cache(c2)
+    q3.set_query_cache(c2)
 
-    q1 = Query(query_type="sequential", time=t, parameters={"start": 0, "end": 50, "loop_size": 10})
-    # q2 = Query(query_type="select", time=t, parameters={'start': 585, 'end': 604})
-    q1.set_query_cache(c2)
+    counter = 0
+    # print(q3.actions)
+    while not q3.is_done():
+        q3.step(q3.actions[0])
+        counter += 1
 
-    while not q1.is_done():
-        q1.step()
+    print(q3.step(), counter)
 
-    print(q1.step())
-    # q2 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
     # q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
     # q4 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
 

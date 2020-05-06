@@ -19,7 +19,8 @@ def get_select_query_parameters(start, end) -> Dict:
 
 
 def get_join_query_parameters(start_1, end_1, start_2, end_2) -> Dict:
-    parameters = {"start_table_1": start_1, "end_table_1": end_1, "start_table_2": start_2, "end_table_2": end_2,
+    parameters = {"start_table_1": start_1, "end_table_1": end_1,
+                  "start_table_2": start_2, "end_table_2": end_2,
                   "query_type": "join"}
     return parameters
 
@@ -81,7 +82,7 @@ def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int, av
     # t = Time()
     c = Cache(cache_size, time=t, equate_id_to_value=True)
 
-    c.set_strategy(strategies[strategy]())
+    # c.set_strategy(strategies[strategy]())
 
     for parameters in wl:
         query_params = {key: value for key, value in parameters.items() if key != "query_type"}
@@ -90,7 +91,7 @@ def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int, av
         query.set_query_cache(c)
 
         while not query.is_done():
-            query.step()
+            query.step("lru")
 
         hits, misses = query.step()
 
