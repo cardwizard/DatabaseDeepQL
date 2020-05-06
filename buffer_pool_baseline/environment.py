@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
 from buffer_pool_baseline.timer import Time
 from buffer_pool_baseline.cache import Cache
-from buffer_pool_baseline.strategy import EvictLeastRecentlyUsed, EvictMostRecentlyUsed, EvictRandomly, EvictionStrategy
+from buffer_pool_baseline.strategy import EvictionStrategy
 
 
 class Query:
@@ -178,24 +178,15 @@ if __name__ == '__main__':
 
     c2 = Cache(10, t, equate_id_to_value=True)
 
-    # c2.set_strategy("mru")
-
     q1 = Query(query_type="sequential", time=t,
                parameters={"start": 0, "end": 50, "loop_size": 10})
     q2 = Query(query_type="join", time=t, parameters={'start_table_1': 0, 'end_table_1': 20,
                                                       'start_table_2': 10, 'end_table_2': 30})
     q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
-    # q1.set_query_cache(c2)
+
     q3.set_query_cache(c2)
 
-    counter = 0
-    # print(q3.actions)
     while not q3.is_done():
         q3.step(q3.actions[0])
-        counter += 1
 
-    print(q3.step(), counter)
-
-    # q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
-    # q4 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
-
+    print(q3.step())

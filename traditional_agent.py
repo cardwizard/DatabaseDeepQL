@@ -1,6 +1,5 @@
 from buffer_pool_baseline.environment import Query, Time, \
-    Cache, \
-    EvictLeastRecentlyUsed, EvictMostRecentlyUsed, EvictRandomly
+    Cache
 from json import dumps, loads
 from typing import List, Dict
 from tqdm import tqdm
@@ -10,7 +9,7 @@ from sys import argv
 import random
 
 random.seed(10)
-strategies = {"LRU": EvictLeastRecentlyUsed, "MRU": EvictMostRecentlyUsed, "Random": EvictRandomly}
+# strategies = {"LRU": EvictLeastRecentlyUsed, "MRU": EvictMostRecentlyUsed, "Random": EvictRandomly}
 
 
 def get_select_query_parameters(start, end) -> Dict:
@@ -91,7 +90,7 @@ def run_workload(wl: List[Dict], cache_size: int, strategy, workload_id: int, av
         query.set_query_cache(c)
 
         while not query.is_done():
-            query.step("lru")
+            query.step(strategy)
 
         hits, misses = query.step()
 
@@ -121,7 +120,7 @@ if __name__ == '__main__':
         workload = get_overlapping_blocks(50, table_size, probability=loads(argv[1]))
 
         for cache in range(cache_size_start, cache_size_end, 20):
-            for strategy in strategies:
+            for strategy in ["mru", "lru", "random"]:
                 workload_output = run_workload(workload, cache, strategy, workload_id, table_size)
                 output = dumps(workload_output)
 
