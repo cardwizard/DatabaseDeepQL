@@ -47,6 +47,12 @@ class Cache:
                            "mru": EvictMostRecentlyUsed()}
         self.dynamic_strategy = False
 
+    def copy(self):
+        c = Cache(self.max_cache_size, self.time.copy(), self.equate_id_to_value)
+        c.cache_map = self.cache_map.copy()
+        c.dynamic_strategy = self.dynamic_strategy
+        return c
+
     def get_current_size(self):
         return len(self.cache_map)
 

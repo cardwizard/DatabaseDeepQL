@@ -10,3 +10,7 @@ class Time:
 
     def reset(self):
         self.time_step = 0
+
+    def copy(self):
+        t = Time(self.time_step)
+        return t
