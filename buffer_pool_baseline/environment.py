@@ -17,7 +17,7 @@ class Query:
         self.found_in_cache_optim = found_in_cache_optim
         self.hits = 0
         self.misses = 0
-        self.actions = ["lru", "mru", "random"]
+        self.actions = ["lru", "mru"]
 
     def copy(self):
         q = Query(self.query_type, self.parameters, self.cache.copy(), self.time.copy())
@@ -184,10 +184,11 @@ if __name__ == '__main__':
 
     t = Time()
 
-    c2 = Cache(5, t, equate_id_to_value=True)
+    c2 = Cache(4, t, equate_id_to_value=True)
 
     q1 = Query(query_type="sequential", time=t,
-               parameters={"start": 0, "end": 5, "loop_size": 2})
+               parameters={"start": 1, "end": 6, "loop_size": 3})
+
     q2 = Query(query_type="join", time=t, parameters={'start_table_1': 0, 'end_table_1': 20,
                                                       'start_table_2': 10, 'end_table_2': 30})
     q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
@@ -197,7 +198,7 @@ if __name__ == '__main__':
     old_observations = []
 
     while not q1.is_done():
-        q1.step(q1.actions[0])
-        old_observations.append(q1.copy())
+        q1.step("mru")
+        # old_observations.append(q1.copy())
 
     print(q1.step())
