@@ -32,3 +32,17 @@ class EvictRandomly(EvictionStrategy):
     def suggest_evictions(cache_map) -> List:
         random_key = random.choice(list(cache_map.keys()))
         return [cache_map[random_key]]
+
+
+class EvictFIFO(EvictionStrategy):
+    @staticmethod
+    def suggest_evictions(cache_map) -> List:
+        first_in = min([x.first_access for x in cache_map.values()])
+        return [cache_element for id, cache_element in cache_map.items() if cache_element.first_access == first_in]
+
+
+class EvictLFU(EvictionStrategy):
+    @staticmethod
+    def suggest_evictions(cache_map) -> List:
+        lfu = min([x.hit_count for x in cache_map.values()])
+        return [cache_element for id, cache_element in cache_map.items() if cache_element.hit_count == lfu]

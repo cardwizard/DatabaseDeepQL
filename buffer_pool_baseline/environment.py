@@ -193,12 +193,12 @@ if __name__ == '__main__':
                                                       'start_table_2': 10, 'end_table_2': 30})
     q3 = Query(query_type="select", time=t, parameters={"start": 10, "end": 20})
 
-    q1.set_query_cache(c2)
+    q2.set_query_cache(c2)
 
     old_observations = []
 
-    while not q1.is_done():
-        q1.step("mru")
+    while not q2.is_done():
+        q2.step("lfu")
         # old_observations.append(q1.copy())
 
-    print(q1.step())
+    print(q2.step())
