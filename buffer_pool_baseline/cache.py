@@ -1,8 +1,8 @@
 from buffer_pool_baseline.timer import Time
 from uuid import uuid4
 from typing import Union
-from buffer_pool_baseline.strategy import EvictionStrategy, EvictLeastRecentlyUsed, EvictMostRecentlyUsed, \
-    EvictRandomly
+from buffer_pool_baseline.strategy import EvictLeastRecentlyUsed, EvictMostRecentlyUsed, \
+    EvictRandomly, EvictFIFO, EvictLFU
 
 
 class ActionNotPassedError(Exception):
@@ -19,6 +19,7 @@ class CacheElement:
         self.hit_count = 0
         self.time = time
         self.last_access = time.now()
+        self.first_access = time.now()
 
     def get_value(self):
         self.last_access = self.time.now()
@@ -44,7 +45,7 @@ class Cache:
 
         self.strategy = None
         self.strategy_pool = {"random": EvictRandomly(), "lru": EvictLeastRecentlyUsed(),
-                           "mru": EvictMostRecentlyUsed()}
+                           "mru": EvictMostRecentlyUsed(), "fifo": EvictFIFO(), "lfu": EvictLFU()}
         self.dynamic_strategy = False
 
     def copy(self):
